@@ -1,225 +1,177 @@
 # CleanCommerce — Laravel 13 Hexagonal Clean Architecture API + Enterprise Vue 3.5 SPA
 
-Nền tảng E-Commerce kết hợp trọn vẹn **hai chuẩn mực thực chiến**:
-1. **Chuẩn Polyrepo Độc Lập (Team / Tech Lead Standard):** `backend/` và `frontend/` tự chứa đầy đủ `.env.example`, `Dockerfile`, `docker-compose.yml` và `docs/` riêng biệt — sẵn sàng tách thành 2 Git repository độc lập bất kỳ lúc nào mà không vướng file rác; Backend thuần JSON API (`0` `vite.config.js`), Frontend phân tầng chuẩn Enterprise Vue 3 (`assets`, `components`, `composables`, `layouts`, `modules`, `router`, `services/axiosClient`, `stores`, `utils`).
-2. **Chuẩn Big Tech PHP & Docker Compose v2 `include:` (Shopify / Stripe Craft):** Tại thư mục gốc, file `compose.yaml` (7 dòng chuẩn Docker Compose v2.20+) nối thẳng `backend/docker-compose.yml` và `frontend/docker-compose.yml` trên mạng cầu chung `cleancommerce-shared-net` — giúp chạy toàn bộ **9 containers chỉ bằng 1 câu lệnh duy nhất** mà không lặp lại một dòng cấu hình nào.
+Kiến trúc thương mại điện tử tổ chức chặt chẽ theo nguyên tắc **"Cái nào cần riêng thì riêng, cái nào cần chung thì chung (`0%` trùng lặp)"**:
+
+1. **PHẦN RIÊNG (`backend/` & `frontend/` — Tự chủ 100%, Polyrepo-Ready):**
+   - Mỗi thư mục tự sở hữu trọn bộ `.env.example`, `Dockerfile`, `docker-compose.yml` và tài liệu nội bộ chuyên môn của riêng mình (`backend/docs/LAW.md` & `MODULE_MAP.md`; `frontend/docs/DESIGN.md`).
+   - `backend/` thuần 100% JSON REST API (`0` `vite.config.js`, `0` `package.json`); `frontend/` phân tầng chuẩn Enterprise Vue 3 (`assets`, `components`, `composables`, `layouts`, `modules`, `router`, `services`, `stores`, `utils`).
+2. **PHẦN CHUNG (`compose.yaml` & `docs/` tại gốc — Nhìn thấu toàn hệ thống khớp nhau 1:1):**
+   - `compose.yaml` (chuẩn Docker Compose v2.20+ `include:`) gộp chạy toàn bộ **9 containers chỉ bằng 1 câu lệnh** trên mạng cầu `cleancommerce-shared-net` mà không lặp lại một dòng cấu hình nào.
+   - `docs/API_CONTRACT.md` & `docs/ARCHITECTURE.md` là **Nguồn sự thật duy nhất** ánh xạ 1:1 từng màn hình/hàm `Axios Service` bên Frontend sang đúng `Route -> Controller -> UseCase Action -> Domain Port -> PostgreSQL` bên Backend.
 
 ---
 
-## 1. Sơ Đồ Tổng Thể Hạ Tầng Docker `include:` (`9 Self-Contained Containers`)
+## 1. Cấu Trúc Thư Mục Phân Định Rõ `CHUNG` vs `RIÊNG`
 
-```mermaid
-flowchart TB
-    Root["compose.yaml (Root 1-Command Entry)\ninclude: backend/docker-compose.yml + frontend/docker-compose.yml"]
-
-    subgraph FERepo["Repo Độc Lập: frontend/ (Vue 3.5 + TS + Axios + Pinia + SCSS)"]
-        Web["web (:5173)\nDev: Vite HMR | Prod: Nginx SPA"]
-    end
-
-    subgraph BERepo["Repo Độc Lập: backend/ (Laravel 13 Pure Headless API)"]
-        API["api: FrankenPHP 8.4 (:8080)\nREST API /api/v1/*"]
-        Relay["outbox-relay\nphp artisan outbox:relay"]
-        Queue["queue\nphp artisan queue:work redis"]
-        PGB["pgbouncer (:6432)\nTransaction Pooler"]
-        PG[("postgres:16-alpine\nACID + Outbox + Inbox")]
-        Redis[("redis:7.4-alpine\nCache, Locks, Queue")]
-        Meili[("meilisearch:v1.12\nFaceted Search")]
-        Mail["mailpit (:8025)\nLocal SMTP UI"]
-    end
-
-    Root -.-> FERepo
-    Root -.-> BERepo
-    Web -->|"HTTP JSON + Bearer + Idempotency-Key"| API
-    API --> PGB --> PG
-    API --> Redis
-    API --> Meili
-    Relay --> PGB
-    Relay --> Redis
-    Queue --> PGB
-    Queue --> Meili
-    Queue --> Mail
+```text
+VueLaravelProject/
+├── compose.yaml                     # [CHUNG] Docker Compose v2 `include:` nối backend + frontend (0 lặp YAML)
+├── AGENTS.md / CLAUDE.md            # [CHUNG] Trạm điều hướng cho AI Agents (Antigravity, Claude Code, Codex)
+├── README.md                        # [CHUNG] Tổng quan toàn hệ thống & hướng dẫn khởi chạy
+├── docs/                            # [CHUNG] Tài liệu kết nối liên miền (Single Source of Truth)
+│   ├── ARCHITECTURE.md              #   ├─ Sơ đồ khớp nối đầu-cuối FE <-> API <-> BE <-> DB & 6 sự cố Cloud
+│   ├── API_CONTRACT.md              #   ├─ Bảng ánh xạ 1:1 toàn bộ 22 Endpoints (Vue View <-> Axios <-> Laravel Action)
+│   └── WBS.md                       #   └─ Phạm vi tổng thể & Cổng nghiệm thu Full-Stack
+│
+├── backend/                         # [RIÊNG] Dịch vụ Laravel 13 Pure Headless API (0 vite.config.js)
+│   ├── .env.example & Dockerfile & docker-compose.yml (8 containers độc lập)
+│   ├── AGENTS.md / CLAUDE.md & README.md
+│   ├── docs/                        #   ├─ Chỉ chứa tài liệu nội bộ PHP/Hexagonal:
+│   │   ├── LAW.md                   #   │  Luật 4 vòng Pure PHP, Money BIGINT, ksort + FOR UPDATE, Outbox, Pint
+│   │   ├── MODULE_MAP.md            #   │  Bản đồ 7 Bounded Contexts, Ports <-> Adapters & outbox:relay
+│   │   └── WBS.md                   #   │  Cổng kiểm thử độc lập Backend (`composer lint && composer test`)
+│   └── app/{Core/SharedKernel, Modules/7-Bounded-Contexts}
+│
+└── frontend/                        # [RIÊNG] Dịch vụ Enterprise Vue 3.5 + TS + Axios + Pinia + SCSS
+    ├── .env.example & Dockerfile & docker-compose.yml (Container SPA độc lập)
+    ├── AGENTS.md / CLAUDE.md & README.md
+    ├── docs/                        #   ├─ Chỉ chứa tài liệu nội bộ UI/Frontend:
+    │   ├── DESIGN.md                #   │  Calm Daylight 60-30-10 SCSS Tokens, Anti-Slop & Chuẩn cây `src/`
+    │   └── WBS.md                   #   │  Cổng kiểm thử độc lập Frontend (`npm run build` & `fe-gate.mjs`)
+    └── src/{assets, components, composables, layouts, modules, router, services, stores, types, utils}
 ```
 
+### Danh Mục Tài Liệu Đọc Nhanh
+- **Tích hợp Toàn hệ thống (`PHẦN CHUNG`):** [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) · [docs/API_CONTRACT.md](./docs/API_CONTRACT.md) · [docs/WBS.md](./docs/WBS.md)
+- **Chuyên sâu nội bộ Backend (`PHẦN RIÊNG`):** [backend/docs/LAW.md](./backend/docs/LAW.md) · [backend/docs/MODULE_MAP.md](./backend/docs/MODULE_MAP.md) · [backend/docs/WBS.md](./backend/docs/WBS.md)
+- **Chuyên sâu nội bộ Frontend (`PHẦN RIÊNG`):** [frontend/docs/DESIGN.md](./frontend/docs/DESIGN.md) · [frontend/docs/WBS.md](./frontend/docs/WBS.md)
+
 ---
 
-## 2. Kiến Trúc Nội Tại Hai Miền (`Backend Hexagonal DDD` & `Frontend Enterprise Vue 3`)
-
-### 2.1 Backend: 4 Vòng Đồng Tâm & 7 Bounded Contexts (`declare(strict_types=1)` + Pure Domain)
+## 2. Sơ Đồ Khớp Nối Đầu-Cuối Toàn Hệ Thống (`Frontend <-> API Contract <-> Backend <-> Infra`)
 
 ```mermaid
 flowchart LR
-    UI["UI Layer\nThin API Controllers"] --> App["Application Layer\nreadonly *Action + DTOs"]
-    Infra["Infrastructure Layer\nEloquent, Sanctum, Outbox, HMAC"] --> App
-    App --> Domain["Domain Layer (100% Pure PHP)\nEntities, Money VO, Events, *Port Interfaces"]
-    Infra -.->|"Implements Port"| Domain
-```
+    subgraph FE["RIÊNG: frontend/ (Enterprise Vue 3.5 SPA)"]
+        direction TB
+        V["layouts/ + modules/*/views/\n(Customer · Admin · Auth)"] --> C["composables/ + stores/\n(Pinia State)"]
+        C --> S["services/*.service.ts\n-> axiosClient.ts"]
+    end
 
-```mermaid
-flowchart TD
-    Ordering["Ordering\n(Đặt hàng, Trạng thái, Chống BOLA)"]
-    Catalog["Catalog\n(Danh mục, SPU/SKU)"]
-    Inventory["Inventory\n(Khóa FOR UPDATE & Giữ chỗ TTL)"]
-    Promotion["Promotion\n(Báo giá giỏ & Voucher)"]
-    Payment["Payment\n(VietQR, Stripe, HMAC Inbox)"]
-    Identity["Identity\n(Sanctum Token & RBAC)"]
-    Review["ReviewAnalytics\n(Verified Review & GMV)"]
+    subgraph SHARED["CHUNG: Hợp Đồng Tích Hợp"]
+        API_SPEC["REST JSON /api/v1/*\n22 Endpoints khớp 1:1\n(docs/API_CONTRACT.md)"]
+    end
 
-    Ordering -->|"CatalogVariantReadPort"| Catalog
-    Ordering -->|"InventoryReservationPort"| Inventory
-    Ordering -->|"CouponEvaluatorPort"| Promotion
-    Ordering -->|"PaymentInstructionPort"| Payment
-    Payment -->|"OrderPaymentSettlementPort"| Ordering
-    Identity -->|"OrderAnalyticsReadPort"| Ordering
-    Review -->|"OrderAnalyticsReadPort"| Ordering
-```
+    subgraph BE["RIÊNG: backend/ (Laravel 13 Hexagonal API)"]
+        direction TB
+        MW["Middleware + Thin Controllers\n(Sanctum · AdminRole · Idempotency)"] --> ACT["Application *Action\n(final readonly UseCases)"]
+        ACT --> DOM["Domain Layer (100% Pure PHP)\n(Money VO · Entities · *Port)"]
+        ADAP["Infrastructure *Adapter\n(Eloquent · Outbox · HMAC Inbox)"] -.->|"Implements"| DOM
+    end
 
-### 2.2 Frontend: Luồng Dữ Liệu Một Chiều Chuẩn Enterprise Vue 3.5
+    subgraph DATA["Hạ Tầng Dữ Liệu & Worker (backend/docker-compose.yml)"]
+        direction TB
+        PGB["PgBouncer (:6432)"] --> PG[("PostgreSQL 16\nFOR UPDATE + Outbox/Inbox")]
+        REDIS[("Redis 7.4 + Queue + Meilisearch")]
+    end
 
-```mermaid
-flowchart LR
-    Layouts["layouts/\nCustomer · Admin · Auth"] --> Views["modules/{auth,customer,admin}/views/"]
-    Views --> Composables["composables/\nuseAuth · useCart · useNotification"]
-    Composables --> Stores["stores/\nauth.store · cart.store · ui.store"]
-    Stores --> Services["services/\nauth · product · order · cart"]
-    Services --> Axios["services/axiosClient.ts\nBearer + 401 Cleanup + Idempotency-Key"]
+    S ==>|"Bearer + Idempotency-Key"| API_SPEC ==> MW
+    ADAP --> PGB
+    ADAP --> REDIS
 ```
 
 ---
 
-## 3. Phân Tích Đầy Đủ Các Luồng Giao Dịch & Tình Huống Biên (`Multi-Flow & Edge Cases`)
+## 3. Hai Luồng Giao Dịch Xuyên Miền & Chống Sập Thực Chiến
 
-### 3.1 Luồng Đặt Hàng Idempotent, Chống Deadlock Đa SKU & Chống Bán Lố Flash Sale
+### 3.1 Đặt Hàng Xuyên Miền (`Vue CheckoutView -> Idempotency -> Sorted Lock FOR UPDATE -> Outbox`)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Buyer as Khách hàng (Vue SPA)
-    participant Idem as IdempotencyMiddleware
-    participant Place as PlaceOrderAction
-    participant DB as PostgreSQL (ACID)
+    actor Buyer as Khách hàng
+    participant Vue as CheckoutView.vue (FE)
+    participant Idem as IdempotencyMiddleware (BE)
+    participant Place as PlaceOrderAction (BE)
+    participant DB as PostgreSQL 16
 
-    Buyer->>Idem: POST /api/v1/checkout (Idempotency-Key: UUID)
-    Idem->>DB: Tra cứu idempotency_keys
-    alt Cùng Key + Khác Payload (Sửa trộm giỏ hàng)
-        DB-->>Buyer: 409 Conflict (Từ chối ngay)
-    else Cùng Key + Đúng Payload (Mạng lag gửi lại)
-        DB-->>Buyer: 200 OK + X-Idempotent-Replay: true (Trả lại nguyên đơn cũ, không trừ kho lần 2)
-    else Key mới hoàn toàn
-        Idem->>Place: Thực thi trong 1 khối DB::transaction()
-        Note over Place,DB: ksort(variant_id) + ORDER BY variant_id chống Deadlock chéo
+    Buyer->>Vue: Bấm "Đặt hàng & Thanh toán"
+    Vue->>Idem: POST /api/v1/checkout (Idempotency-Key: UUIDv4)
+    alt Gửi trùng Key nhưng khác giỏ hàng
+        Idem-->>Vue: 409 Conflict
+    else Gửi lại cùng Key do mạng 4G chập chờn
+        Idem-->>Vue: 200 OK + X-Idempotent-Replay: true (Trả đúng đơn & mã QR cũ)
+    else Key mới
+        Idem->>Place: DB::transaction() + ksort(variant_id) chống Deadlock
         Place->>DB: SELECT ... FROM inventory_stocks ORDER BY variant_id FOR UPDATE
-        alt available_stock < số lượng đặt
-            DB-->>Buyer: 422 OutOfStock (Rollback toàn bộ)
+        alt Thiếu tồn kho
+            DB-->>Vue: 422 OutOfStock (Rollback sạch)
         else Đủ tồn kho
-            Place->>DB: Trừ available_stock + INSERT inventory_reservations (TTL +30p)
-            Place->>DB: INSERT ordering_orders + ordering_order_lines + outbox_messages (OrderPlaced)
-            Place-->>Idem: Order + Mã QR VietQR
-            Idem->>DB: Lưu snapshot JSON vào idempotency_keys
-            Idem-->>Buyer: 201 Created
+            Place->>DB: Trừ kho + Giữ chỗ 30p + Lưu đơn + Ghi Outbox (OrderPlaced)
+            Idem-->>Vue: 201 Created (Xóa giỏ Pinia + Hiện mã quét VietQR)
         end
     end
 ```
 
-### 3.2 Luồng Webhook HMAC, Chống Trùng Inbox & Bẫy "Chuyển Khoản Trễ Sau Khi Hết Hạn Giữ Chỗ"
+### 3.2 Webhook Ngân Hàng HMAC, Chống Trùng Inbox & Xử Lý Chuyển Khoản Trễ Quá Hạn Giữ Chỗ
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Bank as SePay VietQR / Stripe
-    participant Ctrl as PaymentWebhookController
-    participant Act as ProcessPaymentWebhookAction
+    participant Ctrl as PaymentWebhookController (BE)
+    participant Act as ProcessPaymentWebhookAction (BE)
     participant DB as PostgreSQL (Inbox + Stock Lock)
+    participant UI as Vue ProfileView / Admin OrderDetailView
 
     Bank->>Ctrl: POST /api/v1/webhooks/payment/{provider} (X-Webhook-Signature)
-    Ctrl->>Ctrl: Kiểm tra HMAC-SHA256 (hash_equals)
-    alt Sai chữ ký HMAC
-        Ctrl-->>Bank: 401 Unauthorized
-    else Chữ ký hợp lệ
-        Ctrl->>Act: PaymentWebhookCommand
-        Act->>DB: INSERT inbox_messages (UNIQUE provider, external_event_id)
-        alt Ngân hàng bắn trùng event_id lần 2
-            DB-->>Bank: 200 OK { duplicate: true } (Bỏ qua an toàn)
-        else Sự kiện mới -> Khóa đơn FOR UPDATE
-            alt paid_amount_minor < grand_total_minor (Gian lận sửa số tiền chuyển QR)
-                Act-->>Bank: 422 Underpayment Rejected (Rollback, giữ unpaid)
-            else Đủ tiền -> Gọi confirmForOrder()
-                alt Phiếu giữ còn hiệu lực HOẶC kho hiện tại vẫn đủ hàng cấp lại
-                    Act->>DB: Chốt sold_stock, Order = paid, Ghi Outbox (OrderPaid)
-                    DB-->>Bank: 200 OK { order_status: "paid", payment_status: "paid" }
-                else Phiếu đã hết hạn 30p VÀ khách khác đã mua hết sạch kho
-                    Act->>DB: Kho giữ nguyên = 0 (Không âm kho!), Order = refund_required, Outbox (OrderRefundRequired)
-                    DB-->>Bank: 200 OK { order_status: "refund_required", payment_status: "paid_pending_refund" }
-                end
-            end
+    Ctrl->>Ctrl: Xác thực HMAC-SHA256 (hash_equals)
+    alt Sai chữ ký | Bắn trùng event_id | Chuyển thiếu tiền
+        Ctrl-->>Bank: 401 Unauthorized / 200 duplicate:true / 422 Underpayment
+    else Hợp lệ & Đủ số tiền -> Kiểm tra phiếu giữ chỗ kho
+        alt Còn hạn giữ chỗ HOẶC kho hiện tại vẫn còn hàng cấp lại
+            Act->>DB: Chốt sold_stock, Order = paid, Outbox (OrderPaid)
+            UI->>DB: Hiển thị trạng thái "Đã thanh toán"
+        else Quá hạn 30p VÀ khách khác đã mua sạch tồn kho
+            Act->>DB: Kho giữ nguyên = 0 (Không âm kho!), Order = refund_required, Outbox (OrderRefundRequired)
+            UI->>DB: Hiển thị cảnh báo "Cần hoàn tiền (Hết kho)"
         end
     end
 ```
 
----
-
-## 4. Sổ Tay 6 Sự Cố Thực Chiến Cloud & Giải Pháp Kiến Trúc Đã Tích Hợp
-
-| # | Tình huống thực tế gặp phải trên Production | Nguyên nhân gốc (`Root Cause`) | Giải pháp đã tích hợp & kiểm thử tự động |
-| :-: | :--- | :--- | :--- |
-| **1** | Lỗi `prepared statement "pdo_stmt_..." already exists` khi chạy qua PgBouncer | PgBouncer ở `POOL_MODE=transaction` tráo kết nối vật lý giữa các câu lệnh làm đụng độ PDO prepared statements | Bật `PDO::ATTR_EMULATE_PREPARES => true` cho `pgsql` tại [backend/config/database.php](./backend/config/database.php) |
-| **2** | Âm tồn kho (*Phantom Orders*) khi khách quét QR chuyển tiền trễ sau 35 phút | Hết hạn giữ chỗ 30p kho nhả ra cho Khách B mua đứt, nhưng Webhook Khách A đến trễ vẫn đổi thành `paid` | `confirmForOrder()` khóa dòng thử cấp lại; nếu kho = 0 sẽ chuyển sang `refund_required` + phát `OrderRefundRequired` |
-| **3** | Gian lận sửa số tiền khi chuyển khoản VietQR | Khách sửa tay số tiền từ `890.000₫` xuống `10.000₫` nhưng giữ nguyên mã `ORD-...` | `settlePaidOrder()` chặn `422` nếu `paidAmountMinor < grand_total_minor` |
-| **4** | Treo DB (`Deadlock`) khi 2 giỏ hàng khóa cặp SKU ngược chiều nhau | Request 1 khóa `[SKU_1, SKU_2]`, Request 2 khóa `[SKU_2, SKU_1]` cùng mili-giây | Luôn `ksort` + `ORDER BY variant_id` trước `SELECT ... FOR UPDATE` |
-| **5** | Đặt trùng 2 đơn khi mạng 4G lag khách bấm liên tiếp | Client retry `POST /api/v1/checkout` khi chưa nhận response | Header `Idempotency-Key` (UUIDv4) + bảng `idempotency_keys` trả snapshot cũ |
-| **6** | Rò rỉ phiên đăng nhập giữa 2 request trên FrankenPHP / Octane | Tiến trình PHP giữ bộ nhớ qua nhiều request | Dùng `final readonly` Actions không biến `static` + `FreshBearerTokenMiddleware` + PHP `Money` số nguyên (`int`, không dùng `float`) |
+*(Xem trọn bộ bảng ánh xạ 22 endpoints tại [docs/API_CONTRACT.md](./docs/API_CONTRACT.md) và 6 bài học sự cố Cloud thực chiến tại [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)).*
 
 ---
 
-## 5. Cấu Trúc Kho Chứa & Liên Kết Tài Liệu Chi Tiết
+## 4. Ba Chế Độ Khởi Chạy Linh Hoạt (`Chung` hoặc `Riêng`)
 
-```text
-VueLaravelProject/
-├── compose.yaml                 # Docker Compose v2 `include:` (gộp chạy cả BE + FE bằng 1 lệnh)
-├── AGENTS.md / CLAUDE.md        # Điều hướng nhanh cho AI Agents (Claude Code, Codex, Antigravity, Cursor)
-├── backend/                     # Repo Độc Lập 1: Laravel 13 Pure Headless API (0 vite.config.js)
-│   ├── .env.example & Dockerfile & docker-compose.yml
-│   ├── docs/{LAW.md, ARCHITECTURE.md, WBS.md, api/OPENAPI_V1.md}
-│   └── app/{Core/SharedKernel, Modules/7-Bounded-Contexts}
-└── frontend/                    # Repo Độc Lập 2: Enterprise Vue 3.5 + TS + Axios + Pinia + SCSS
-    ├── .env.example & Dockerfile & docker-compose.yml
-    ├── docs/{DESIGN.md, ARCHITECTURE.md, WBS.md, api/OPENAPI_V1.md}
-    └── src/{assets, components, composables, layouts, modules, router, services, stores, utils}
-```
-
-- **Tài liệu chuyên sâu Backend:** [LAW.md](./backend/docs/LAW.md) · [ARCHITECTURE.md](./backend/docs/ARCHITECTURE.md) · [WBS.md](./backend/docs/WBS.md) · [OPENAPI_V1.md](./backend/docs/api/OPENAPI_V1.md)
-- **Tài liệu chuyên sâu Frontend:** [DESIGN.md](./frontend/docs/DESIGN.md) · [ARCHITECTURE.md](./frontend/docs/ARCHITECTURE.md) · [WBS.md](./frontend/docs/WBS.md)
-
----
-
-## 6. Ba Cách Khởi Chạy Linh Hoạt
-
-### Cách 1 — Chạy Full-Stack 9 Containers Từ Thư Mục Gốc (1 Lệnh Duy Nhất Qua `compose.yaml`)
+### Chế độ 1 — Bật Chung Toàn Hệ Thống 9 Containers Từ Gốc (`compose.yaml`)
 ```bash
 docker compose up -d --build
 docker compose exec api php artisan migrate --seed --force
 ```
-- **Storefront & Admin SPA:** http://localhost:5173
+- **Frontend SPA (`Storefront` + `Admin`):** http://localhost:5173
 - **Headless REST API:** http://localhost:8080/api/v1/health · **Mailpit:** http://localhost:8025 · **Meilisearch:** http://localhost:7700
 
-### Cách 2 — Chạy Tách Rời Từng Repo Độc Lập (Khi Chia Team BE / FE Riêng)
+### Chế độ 2 — Bật Riêng Từng Dịch Vụ Khi Tách Team / Tách Repo
 ```bash
-# Chỉ bật cụm Backend API + DB + Redis + Queue + Outbox:
+# Nhóm Backend chạy riêng cụm 8 containers của mình:
 cd backend && cp -n .env.example .env && docker compose up -d --build
 
-# Chỉ bật cụm Frontend SPA:
+# Nhóm Frontend chạy riêng container SPA của mình:
 cd frontend && cp -n .env.example .env && docker compose up -d --build
 ```
 
-### Cách 3 — Chạy Trực Tiếp Trên Máy Local (Không Cần Bật Docker)
+### Chế độ 3 — Phát Triển Nhanh Trên Máy Local (Không Bật Docker)
 ```bash
 # Terminal 1 (Backend API + SQLite):
-cd backend && composer test && php artisan migrate:fresh --seed && php artisan serve --port=8080
+cd backend && composer lint && composer test && php artisan migrate:fresh --seed && php artisan serve --port=8080
 
-# Terminal 2 (Frontend SPA):
+# Terminal 2 (Frontend Vue 3 SPA):
 cd frontend && npm run dev
 ```
 
-### Tài Khoản & Voucher Seed Sẵn
-- **Admin (`/admin`):** `admin@cleancommerce.vn` / `Admin@123456`
-- **Khách hàng:** `khachhang@cleancommerce.vn` / `Customer@123456` *(có nút điền nhanh 1 chạm tại `/auth/login`)*
-- **Mã giảm giá:** `WELCOME10` · `VIP200K` · `FREESHIP`
+### Tài Khoản & Mã Giảm Giá Seed Sẵn
+- **Quản trị viên (`/admin`):** `admin@cleancommerce.vn` / `Admin@123456`
+- **Khách hàng:** `khachhang@cleancommerce.vn` / `Customer@123456` *(có nút điền nhanh tại `/auth/login`)*
+- **Voucher thử nghiệm:** `WELCOME10` · `VIP200K` · `FREESHIP`

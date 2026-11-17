@@ -1,24 +1,25 @@
-# Frontend Work Breakdown Structure & Verification Gates (`frontend/docs/WBS.md`)
+# Cấu Trúc Công Việc & Cổng Nghiệm Thu Riêng Frontend (`frontend/docs/WBS.md`)
 
-## 1. Scope Boundary
-- **In-Scope:** Standalone Vue 3.5 + TypeScript SPA structured by `assets/`, `components/{base,common}`, `composables/`, `layouts/`, `modules/{auth,customer,admin}`, `router/`, `services/axiosClient`, `stores/`, and `utils/`.
-- **Out-of-Scope (Non-Goals):** Server-side Inertia/Blade coupling or direct database connections.
+## 1. Phạm Vi Nội Bộ (`Frontend Scope`)
+- **Trong phạm vi (`In-Scope`):** Ứng dụng đơn trang độc lập Vue 3.5 + TypeScript + Pinia + Vue Router 4 + Axios + SCSS (`sass-embedded`) đóng gói qua `frontend/Dockerfile` & `frontend/docker-compose.yml`.
+- **Ngoài phạm vi (`Out-of-Scope`):** Không phụ thuộc Inertia/Blade, không kết nối trực tiếp DB; mọi giao tiếp dữ liệu đi qua `src/services/*.ts` theo hợp đồng chung [../../docs/API_CONTRACT.md](../../docs/API_CONTRACT.md).
 
-## 2. Master WBS
-| ID | Deliverable | Target Path | Status |
+## 2. Hạng Mục Thực Thi (`Frontend WBS`)
+| Mã | Hạng mục | Đường dẫn nội bộ | Trạng thái |
 | :--- | :--- | :--- | :---: |
-| **FE-01** | SCSS tokens (`variables.scss`, `main.scss`) & Base/Common UI components | `src/assets/`, `src/components/` | `[x]` |
-| **FE-02** | Axios client with interceptors + domain services (`auth`, `product`, `order`, `cart`) | `src/services/` | `[x]` |
-| **FE-03** | Pinia stores (`auth.store`, `cart.store`, `ui.store`) & Composables | `src/stores/`, `src/composables/` | `[x]` |
-| **FE-04** | Layouts (`Customer`, `Admin`, `Auth`) & split Router (`customer.routes`, `admin.routes`) | `src/layouts/`, `src/router/` | `[x]` |
-| **FE-05** | Auth, Customer Storefront (6 views) & Admin Dashboard (6 views incl. Products/Orders/Users) | `src/modules/{auth,customer,admin}/` | `[x]` |
+| **FE-01** | Hệ biến SCSS (`variables.scss`, `main.scss`) & bộ Component nền (`base/`, `common/`) | `./src/assets/`, `./src/components/` | `[x]` |
+| **FE-02** | Tầng giao tiếp `axiosClient.ts` + 4 dịch vụ miền (`auth`, `product`, `cart`, `order`) | `./src/services/`, `./src/types/` | `[x]` |
+| **FE-03** | Quản lý trạng thái Pinia (`stores/`) + Hooks dùng chung (`composables/`) + Helpers (`utils/`) | `./src/stores/`, `./src/composables/`, `./src/utils/` | `[x]` |
+| **FE-04** | 3 Khung `layouts/` & bộ định tuyến phân quyền `router/` (`requiresAdmin` guard) | `./src/layouts/`, `./src/router/` | `[x]` |
+| **FE-05** | 3 Phân hệ `modules/{auth,customer,admin}` (14 màn hình & đầy đủ luồng VietQR / Hoàn tiền trễ) | `./src/modules/` | `[x]` |
 
-## 3. Acceptance Criteria (`Done Means`)
-- [x] Directory tree matches the team's Enterprise Vue 3 architecture 1:1.
-- [x] `docker compose config --quiet`, `npm run build` (`vue-tsc -b && vite build`), and `fe-gate.mjs src --app` all exit `0`.
+## 3. Tiêu Chí Nghiệm Thu (`Acceptance Criteria — Done Means`)
+- [x] Cây thư mục `src/` tuân thủ chính xác chuẩn phân tầng Enterprise Vue 3.
+- [x] `docker compose config --quiet`, `npm run build` (`vue-tsc -b && vite build`) và cổng `fe-gate.mjs src --app` đều đạt `exit 0` (`0 FAIL, 0 REFLEX`).
 
-## 4. Verification Commands (`Must Exit 0`)
-- `docker compose config --quiet`
-- `npm run build`
-- `node ~/.gemini/config/skills/spec-discovery/scripts/spec-gate.mjs .`
-- `node ~/.gemini/config/skills/fe-anti-slop/scripts/fe-gate.mjs src --app`
+## 4. Lệnh Kiểm Chứng Độc Lập (`Must Exit 0` Khi Đứng Trong `frontend/`)
+```bash
+docker compose config --quiet
+npm run build
+node ~/.gemini/config/skills/fe-anti-slop/scripts/fe-gate.mjs src --app
+```
