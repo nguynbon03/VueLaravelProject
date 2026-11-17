@@ -40,7 +40,7 @@ final readonly class AuthActions
         $result = $this->authPort->attemptLogin(strtolower(trim($email)), $password);
 
         if ($result === null) {
-            throw new InvalidCredentialsException();
+            throw new InvalidCredentialsException;
         }
 
         return [

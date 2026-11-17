@@ -15,11 +15,11 @@ final class ArchitectureBoundaryTest extends TestCase
 {
     public function test_domain_layers_are_100_percent_pure_php_with_zero_framework_imports(): void
     {
-        $modulesBase = dirname(__DIR__, 2) . '/app/Modules';
+        $modulesBase = dirname(__DIR__, 2).'/app/Modules';
         $this->assertDirectoryExists($modulesBase);
 
         $domainFiles = [];
-        $moduleDirs = glob($modulesBase . '/*/Domain', GLOB_ONLYDIR) ?: [];
+        $moduleDirs = glob($modulesBase.'/*/Domain', GLOB_ONLYDIR) ?: [];
         $this->assertCount(7, $moduleDirs, 'All 7 bounded contexts must define a Domain directory.');
 
         foreach ($moduleDirs as $domainDir) {
@@ -46,8 +46,8 @@ final class ArchitectureBoundaryTest extends TestCase
 
     public function test_no_module_imports_another_modules_infrastructure_layer(): void
     {
-        $modulesBase = dirname(__DIR__, 2) . '/app/Modules';
-        $modulePaths = glob($modulesBase . '/*', GLOB_ONLYDIR) ?: [];
+        $modulesBase = dirname(__DIR__, 2).'/app/Modules';
+        $modulePaths = glob($modulesBase.'/*', GLOB_ONLYDIR) ?: [];
 
         foreach ($modulePaths as $modulePath) {
             $currentModule = basename($modulePath);
@@ -100,6 +100,16 @@ final class ArchitectureBoundaryTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         Money::vnd(-1);
+    }
+
+    public function test_backend_repo_is_pure_headless_api_with_zero_frontend_bundler_leftovers(): void
+    {
+        $backendRoot = dirname(__DIR__, 2);
+
+        $this->assertFileDoesNotExist($backendRoot.'/vite.config.js', 'Headless Backend API must not contain vite.config.js');
+        $this->assertFileDoesNotExist($backendRoot.'/package.json', 'Headless Backend API must not contain frontend package.json');
+        $this->assertDirectoryDoesNotExist($backendRoot.'/resources/js', 'Headless Backend API must not contain resources/js');
+        $this->assertDirectoryDoesNotExist($backendRoot.'/resources/css', 'Headless Backend API must not contain resources/css');
     }
 
     /**

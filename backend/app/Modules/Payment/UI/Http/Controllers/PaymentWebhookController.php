@@ -31,9 +31,9 @@ final class PaymentWebhookController extends Controller
         $rawPayload = (string) $request->getContent();
 
         try {
-            $secret = (string) config('services.webhooks.' . $normalizedProvider, '');
+            $secret = (string) config('services.webhooks.'.$normalizedProvider, '');
             if ($signature === '' || $secret === '' || ! hash_equals(hash_hmac('sha256', $rawPayload, $secret), strtolower(trim(str_starts_with(strtolower(trim($signature)), 'sha256=') ? substr(trim($signature), 7) : trim($signature))))) {
-                throw new InvalidWebhookSignatureException();
+                throw new InvalidWebhookSignatureException;
             }
 
             $validated = $request->validate([

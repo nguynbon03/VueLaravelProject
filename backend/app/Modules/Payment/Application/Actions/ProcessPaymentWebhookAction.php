@@ -25,7 +25,7 @@ final readonly class ProcessPaymentWebhookAction
      */
     public function execute(PaymentWebhookCommand $command): array
     {
-        $secret = (string) config('services.webhooks.' . $command->provider, '');
+        $secret = (string) config('services.webhooks.'.$command->provider, '');
         $this->verifier->verify($command->rawPayload, $command->signature, $secret);
 
         return DB::transaction(function () use ($command): array {

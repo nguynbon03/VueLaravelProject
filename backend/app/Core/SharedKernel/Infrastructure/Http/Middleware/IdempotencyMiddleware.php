@@ -23,7 +23,7 @@ final class IdempotencyMiddleware
         }
 
         $method = strtoupper($request->method());
-        $path = '/' . ltrim($request->path(), '/');
+        $path = '/'.ltrim($request->path(), '/');
         $requestHash = hash('sha256', (string) $request->getContent());
         $now = now();
 

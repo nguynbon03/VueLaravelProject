@@ -32,7 +32,7 @@ final readonly class SimulateDevWebhookAction
             'event_id' => sprintf('evt_sim_%s_%s', $orderNumber, bin2hex(random_bytes(4))),
             'order_number' => $orderNumber,
             'amount_minor' => $target->grandTotalMinor,
-            'transaction_ref' => 'SIM-VIETQR-' . strtoupper(bin2hex(random_bytes(3))),
+            'transaction_ref' => 'SIM-VIETQR-'.strtoupper(bin2hex(random_bytes(3))),
         ];
 
         $rawPayload = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);

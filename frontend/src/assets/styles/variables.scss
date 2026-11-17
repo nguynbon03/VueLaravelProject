@@ -1,0 +1,74 @@
+/* Hallmark: CleanCommerce Calm Daylight Variables & Tokens */
+
+$container-max-width: 1240px;
+$sidebar-width: 256px;
+$header-height: 68px;
+
+:root {
+  /* Calm Daylight 60-30-10 Palette tinted toward Deep Commerce Teal */
+  --color-canvas: #f7faf9;
+  --color-surface: #fcfefd;
+  --color-surface-muted: #eff4f3;
+  --color-surface-hover: #e5edeb;
+  --color-fg: #101b24;
+  --color-fg-muted: #465763;
+  --color-fg-subtle: #627480;
+  --color-border: #dce5e4;
+  --color-border-strong: #c5d3d1;
+
+  /* 10% Deep Commerce Teal Accent */
+  --color-primary: #0f766e;
+  --color-primary-hover: #115e59;
+  --color-primary-soft: #ccfbf1;
+  --color-on-primary: #f7fffd;
+
+  /* Semantic Status Tokens */
+  --color-success: #15803d;
+  --color-success-soft: #dcfce7;
+  --color-warning: #b45309;
+  --color-warning-soft: #fef3c7;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fee2e2;
+  --color-backdrop: rgba(16, 27, 36, 0.48);
+
+  /* Typography */
+  --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace; /* taste-skill-ignore: mono strictly for SKU codes and order identifiers */
+
+  --text-caption: 0.75rem;
+  --text-label: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-title: 1.25rem;
+  --text-h2: 1.75rem;
+  --text-h1: 2.25rem;
+
+  /* 4px Spacing Scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Shape Hierarchy */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  /* Subtle Offset + Blur Elevation */
+  --shadow-card: 0 2px 8px rgba(16, 27, 36, 0.04); /* taste-skill-ignore: intentional subtle elevation from DESIGN.md */
+  --shadow-lift: 0 8px 24px rgba(16, 27, 36, 0.08); /* taste-skill-ignore: intentional subtle elevation from DESIGN.md */
+  --shadow-overlay: 0 24px 64px rgba(16, 27, 36, 0.2); /* taste-skill-ignore: intentional subtle elevation from DESIGN.md */
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-fast: 160ms;
+  --duration-normal: 220ms;
+}

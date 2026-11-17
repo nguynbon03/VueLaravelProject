@@ -99,7 +99,7 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
             // Required for PgBouncer POOL_MODE=transaction to prevent prepared statement collisions across pooled backends
             'options' => extension_loaded('pdo_pgsql') ? [
-                \PDO::ATTR_EMULATE_PREPARES => filter_var(env('DB_EMULATE_PREPARES', true), FILTER_VALIDATE_BOOL),
+                PDO::ATTR_EMULATE_PREPARES => filter_var(env('DB_EMULATE_PREPARES', true), FILTER_VALIDATE_BOOL),
             ] : [],
         ],
 

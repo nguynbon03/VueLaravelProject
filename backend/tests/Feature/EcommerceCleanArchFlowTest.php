@@ -88,12 +88,12 @@ final class EcommerceCleanArchFlowTest extends TestCase
         $this->assertNotEmpty($token);
         $this->assertSame('customer', $registerRes->json('data.user.role'));
 
-        $this->withHeader('Authorization', 'Bearer ' . $token)
+        $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/v1/auth/me')
             ->assertOk()
             ->assertJsonPath('data.email', 'thanhha@cleancommerce.vn');
 
-        $this->withHeader('Authorization', 'Bearer ' . $token)
+        $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson('/api/v1/auth/logout')
             ->assertOk()
             ->assertJson(['message' => 'Đã đăng xuất']);
@@ -172,12 +172,12 @@ final class EcommerceCleanArchFlowTest extends TestCase
         $idemKey = 'idem-checkout-uuid-0001';
 
         $first = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $customerToken,
+            'Authorization' => 'Bearer '.$customerToken,
             'Idempotency-Key' => $idemKey,
         ])->postJson('/api/v1/checkout', $payload)->assertCreated();
 
         $second = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $customerToken,
+            'Authorization' => 'Bearer '.$customerToken,
             'Idempotency-Key' => $idemKey,
         ])->postJson('/api/v1/checkout', $payload)->assertCreated();
 
@@ -193,7 +193,7 @@ final class EcommerceCleanArchFlowTest extends TestCase
         $mutated = $payload;
         $mutated['items'] = [['variant_id' => $variantId, 'quantity' => 2]];
         $this->withHeaders([
-            'Authorization' => 'Bearer ' . $customerToken,
+            'Authorization' => 'Bearer '.$customerToken,
             'Idempotency-Key' => $idemKey,
         ])->postJson('/api/v1/checkout', $mutated)->assertStatus(409);
 
@@ -207,12 +207,12 @@ final class EcommerceCleanArchFlowTest extends TestCase
 
         $orderNumber = (string) $first->json('data.order_number');
 
-        $this->withHeader('Authorization', 'Bearer ' . $intruderToken)
-            ->getJson('/api/v1/orders/' . $orderNumber)
+        $this->withHeader('Authorization', 'Bearer '.$intruderToken)
+            ->getJson('/api/v1/orders/'.$orderNumber)
             ->assertStatus(403);
 
-        $this->withHeader('Authorization', 'Bearer ' . $customerToken)
-            ->getJson('/api/v1/orders/' . $orderNumber)
+        $this->withHeader('Authorization', 'Bearer '.$customerToken)
+            ->getJson('/api/v1/orders/'.$orderNumber)
             ->assertOk()
             ->assertJsonPath('data.order_number', $orderNumber);
     }
@@ -369,7 +369,7 @@ final class EcommerceCleanArchFlowTest extends TestCase
             'password' => 'Customer@123456',
         ])->json('data.token');
 
-        $this->withHeader('Authorization', 'Bearer ' . $customerToken)
+        $this->withHeader('Authorization', 'Bearer '.$customerToken)
             ->getJson('/api/v1/admin/analytics/overview')
             ->assertStatus(403);
 
@@ -379,7 +379,7 @@ final class EcommerceCleanArchFlowTest extends TestCase
         ])->json('data.token');
 
         // 1. Admin analytics overview
-        $overview = $this->withHeader('Authorization', 'Bearer ' . $adminToken)
+        $overview = $this->withHeader('Authorization', 'Bearer '.$adminToken)
             ->getJson('/api/v1/admin/analytics/overview')
             ->assertOk()
             ->json('data');
@@ -391,7 +391,7 @@ final class EcommerceCleanArchFlowTest extends TestCase
 
         // 2. Admin inventory adjust
         $lowVariantId = (int) $overview['low_stock_variants'][0]['variant_id'];
-        $this->withHeader('Authorization', 'Bearer ' . $adminToken)
+        $this->withHeader('Authorization', 'Bearer '.$adminToken)
             ->postJson('/api/v1/admin/inventory/adjust', [
                 'variant_id' => $lowVariantId,
                 'delta' => 7,
@@ -402,7 +402,7 @@ final class EcommerceCleanArchFlowTest extends TestCase
 
         // 3. Admin create product
         $categoryId = (int) DB::table('catalog_categories')->value('id');
-        $createdProduct = $this->withHeader('Authorization', 'Bearer ' . $adminToken)
+        $createdProduct = $this->withHeader('Authorization', 'Bearer '.$adminToken)
             ->postJson('/api/v1/admin/products', [
                 'category_id' => $categoryId,
                 'name' => 'Áo Thun Merino Khử Mùi CleanTee',
@@ -446,8 +446,8 @@ final class EcommerceCleanArchFlowTest extends TestCase
 
         $orderNumber = (string) $orderRes->json('data.order_number');
 
-        $this->withHeader('Authorization', 'Bearer ' . $adminToken)
-            ->patchJson('/api/v1/admin/orders/' . $orderNumber . '/status', [
+        $this->withHeader('Authorization', 'Bearer '.$adminToken)
+            ->patchJson('/api/v1/admin/orders/'.$orderNumber.'/status', [
                 'status' => 'cancelled',
             ])
             ->assertOk()
@@ -613,7 +613,7 @@ final class EcommerceCleanArchFlowTest extends TestCase
             'password' => 'Customer@123456',
         ])->json('data.token');
 
-        $this->withHeader('Authorization', 'Bearer ' . $buyerToken)
+        $this->withHeader('Authorization', 'Bearer '.$buyerToken)
             ->postJson('/api/v1/catalog/products/ao-khoac-ky-thuat-urban-shell/reviews', [
                 'rating' => 5,
                 'comment' => 'Mình đặt thêm chiếc thứ hai tặng em trai, chất lượng xuất sắc!',
@@ -628,7 +628,7 @@ final class EcommerceCleanArchFlowTest extends TestCase
             'password' => 'Secret@123',
         ])->json('data.token');
 
-        $this->withHeader('Authorization', 'Bearer ' . $newUserToken)
+        $this->withHeader('Authorization', 'Bearer '.$newUserToken)
             ->postJson('/api/v1/catalog/products/ao-khoac-ky-thuat-urban-shell/reviews', [
                 'rating' => 4,
                 'comment' => 'Thiết kế tối giản rất đẹp mắt.',

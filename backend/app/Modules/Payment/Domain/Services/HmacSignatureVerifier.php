@@ -16,7 +16,7 @@ final readonly class HmacSignatureVerifier
     public function verify(string $rawPayload, string $providedSignature, string $secret): void
     {
         if (trim($secret) === '' || trim($providedSignature) === '') {
-            throw new InvalidWebhookSignatureException();
+            throw new InvalidWebhookSignatureException;
         }
 
         $normalized = strtolower(trim($providedSignature));
@@ -27,7 +27,7 @@ final readonly class HmacSignatureVerifier
         $expected = $this->sign($rawPayload, $secret);
 
         if (! hash_equals($expected, $normalized)) {
-            throw new InvalidWebhookSignatureException();
+            throw new InvalidWebhookSignatureException;
         }
     }
 }

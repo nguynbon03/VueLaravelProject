@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use PDOException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(

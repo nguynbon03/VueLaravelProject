@@ -26,4 +26,11 @@ interface IdentityAuthPort
     public function attemptLogin(string $email, string $plainPassword): ?array;
 
     public function findById(int $userId): ?UserIdentity;
+
+    /**
+     * @return array<int, array{id: int, name: string, email: string, role: string, phone: string|null, orders_count: int, created_at: string}>
+     */
+    public function listAllUsersWithStats(): array;
+
+    public function updateRole(int $userId, string $role): ?UserIdentity;
 }

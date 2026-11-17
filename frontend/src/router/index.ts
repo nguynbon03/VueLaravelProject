@@ -1,6 +1,29 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../modules/auth/authStore'
-import CatalogView from '../views/CatalogView.vue'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '../stores/auth.store'
+import { adminRoutes } from './admin.routes'
+import { customerRoutes } from './customer.routes'
+
+const authRoutes: RouteRecordRaw[] = [
+  {
+    path: '/auth',
+    component: () => import('../layouts/AuthLayout.vue'),
+    redirect: '/auth/login',
+    children: [
+      {
+        path: 'login',
+        name: 'auth-login',
+        component: () => import('../modules/auth/views/LoginView.vue'),
+        meta: { title: 'Đăng nhập | CleanCommerce' },
+      },
+      {
+        path: 'register',
+        name: 'auth-register',
+        component: () => import('../modules/auth/views/RegisterView.vue'),
+        meta: { title: 'Đăng ký tài khoản | CleanCommerce' },
+      },
+    ],
+  },
+]
 
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -9,48 +32,9 @@ export const router = createRouter({
     return { top: 0 }
   },
   routes: [
-    {
-      path: '/',
-      name: 'catalog',
-      component: CatalogView,
-      meta: { title: 'Cửa hàng | CleanCommerce' },
-    },
-    {
-      path: '/products/:slug',
-      name: 'product-detail',
-      component: () => import('../views/ProductDetailView.vue'),
-      meta: { title: 'Chi tiết sản phẩm | CleanCommerce' },
-    },
-    {
-      path: '/checkout',
-      name: 'checkout',
-      component: () => import('../views/CheckoutView.vue'),
-      meta: { title: 'Giỏ hàng & Thanh toán | CleanCommerce' },
-    },
-    {
-      path: '/orders',
-      name: 'orders',
-      component: () => import('../views/OrdersView.vue'),
-      meta: { title: 'Theo dõi đơn hàng | CleanCommerce' },
-    },
-    {
-      path: '/orders/:orderNumber',
-      name: 'order-detail',
-      component: () => import('../views/OrdersView.vue'),
-      meta: { title: 'Chi tiết đơn hàng | CleanCommerce' },
-    },
-    {
-      path: '/login',
-      name: 'login',
-      component: () => import('../views/AuthView.vue'),
-      meta: { title: 'Đăng nhập & Đăng ký | CleanCommerce' },
-    },
-    {
-      path: '/admin',
-      name: 'admin',
-      component: () => import('../views/AdminDashboardView.vue'),
-      meta: { title: 'Quản trị vận hành | CleanCommerce', requiresAdmin: true },
-    },
+    ...customerRoutes,
+    ...authRoutes,
+    ...adminRoutes,
     {
       path: '/:pathMatch(.*)*',
       redirect: '/',
@@ -69,9 +53,19 @@ router.beforeEach(async (to) => {
     document.title = to.meta.title
   }
 
-  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+  const requiresAdmin = to.matched.some((record) => Boolean(record.meta.requiresAdmin))
+  const requiresAuth = to.matched.some((record) => Boolean(record.meta.requiresAuth))
+
+  if (requiresAdmin && !authStore.isAdmin) {
     return {
-      path: '/login',
+      path: '/auth/login',
+      query: { redirect: to.fullPath },
+    }
+  }
+
+  if (requiresAuth && !authStore.isAuthenticated) {
+    return {
+      path: '/auth/login',
       query: { redirect: to.fullPath },
     }
   }

@@ -69,7 +69,7 @@ final class EloquentCatalogAdapter implements CatalogRepositoryPort, CatalogVari
         }
 
         if ($search !== null && trim($search) !== '') {
-            $keyword = '%' . trim($search) . '%';
+            $keyword = '%'.trim($search).'%';
             $query->where(function ($sub) use ($keyword): void {
                 $sub->where('p.name', 'like', $keyword)
                     ->orWhere('p.brand', 'like', $keyword)
@@ -143,7 +143,7 @@ final class EloquentCatalogAdapter implements CatalogRepositoryPort, CatalogVari
         $slug = $baseSlug;
         $counter = 1;
         while (DB::table('catalog_products')->where('slug', $slug)->exists()) {
-            $slug = $baseSlug . '-' . (++$counter);
+            $slug = $baseSlug.'-'.(++$counter);
         }
 
         $productId = (int) DB::table('catalog_products')->insertGetId([

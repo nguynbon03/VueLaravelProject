@@ -8,8 +8,8 @@ use App\Core\SharedKernel\Application\Contracts\OutboxPort;
 use App\Core\SharedKernel\Domain\ValueObjects\Money;
 use App\Modules\Inventory\Domain\Contracts\InventoryReservationPort;
 use App\Modules\Ordering\Domain\Contracts\OrderAnalyticsReadPort;
-use App\Modules\Ordering\Domain\Contracts\OrderPaymentSettlementPort;
 use App\Modules\Ordering\Domain\Contracts\OrderingRepositoryPort;
+use App\Modules\Ordering\Domain\Contracts\OrderPaymentSettlementPort;
 use App\Modules\Ordering\Domain\Entities\OrderEntity;
 use App\Modules\Ordering\Domain\Entities\OrderLineEntity;
 use App\Modules\Ordering\Domain\Entities\OrderSettlementTarget;
@@ -24,10 +24,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-final readonly class EloquentOrderingAdapter implements
-    OrderingRepositoryPort,
-    OrderPaymentSettlementPort,
-    OrderAnalyticsReadPort
+final readonly class EloquentOrderingAdapter implements OrderAnalyticsReadPort, OrderingRepositoryPort, OrderPaymentSettlementPort
 {
     public function __construct(
         private InventoryReservationPort $inventoryReservations,
@@ -307,6 +304,22 @@ final readonly class EloquentOrderingAdapter implements
             'total_orders_count' => $totalOrdersCount,
             'avg_order_value_minor' => $avgMinor,
         ];
+    }
+
+    public function getOrderCountsByUserId(): array
+    {
+        $rows = DB::table('ordering_orders')
+            ->whereNotNull('user_id')
+            ->selectRaw('user_id, COUNT(*) as orders_count')
+            ->groupBy('user_id')
+            ->get();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row->user_id] = (int) $row->orders_count;
+        }
+
+        return $map;
     }
 
     /**

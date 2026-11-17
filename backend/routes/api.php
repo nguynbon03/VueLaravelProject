@@ -6,6 +6,7 @@ use App\Core\SharedKernel\Infrastructure\Http\Middleware\AdminRoleMiddleware;
 use App\Core\SharedKernel\Infrastructure\Http\Middleware\IdempotencyMiddleware;
 use App\Modules\Catalog\UI\Http\Controllers\AdminProductController;
 use App\Modules\Catalog\UI\Http\Controllers\CatalogController;
+use App\Modules\Identity\UI\Http\Controllers\AdminUserController;
 use App\Modules\Identity\UI\Http\Controllers\AuthController;
 use App\Modules\Inventory\UI\Http\Controllers\AdminInventoryController;
 use App\Modules\Ordering\UI\Http\Controllers\AdminOrderController;
@@ -64,5 +65,7 @@ Route::prefix('v1')->group(function (): void {
             Route::patch('/orders/{orderNumber}/status', [AdminOrderController::class, 'updateStatus']);
             Route::post('/products', [AdminProductController::class, 'store']);
             Route::post('/inventory/adjust', [AdminInventoryController::class, 'adjust']);
+            Route::get('/users', [AdminUserController::class, 'index']);
+            Route::patch('/users/{id}/role', [AdminUserController::class, 'updateRole']);
         });
 });

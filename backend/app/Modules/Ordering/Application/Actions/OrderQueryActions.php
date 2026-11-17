@@ -44,7 +44,7 @@ final readonly class OrderQueryActions
             $isOwner = $requesterUserId !== null && $requesterUserId === $order->customer->userId;
 
             if (! $isAdmin && ! $isOwner) {
-                throw new UnauthorizedOrderAccessException();
+                throw new UnauthorizedOrderAccessException;
             }
         }
 
