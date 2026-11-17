@@ -207,4 +207,5 @@ volumes:
 
 networks:
   backend-net:
+    name: cleancommerce-shared-net
     driver: bridge

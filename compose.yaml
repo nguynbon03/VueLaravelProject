@@ -1,0 +1,8 @@
+# Docker Compose v2.20+ Unified Orchestrator (Zero YAML Duplication)
+# - Run full stack from root: `docker compose up -d --build`
+# - Or run each repo standalone: `cd backend && docker compose up -d` / `cd frontend && docker compose up -d`
+name: cleancommerce-fullstack
+
+include:
+  - path: ./backend/docker-compose.yml
+  - path: ./frontend/docker-compose.yml

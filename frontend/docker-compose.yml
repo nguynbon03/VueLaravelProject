@@ -19,6 +19,13 @@ services:
     volumes:
       - .:/workspace
       - frontend_node_modules:/workspace/node_modules
+    networks:
+      - frontend-net
 
 volumes:
   frontend_node_modules:
+
+networks:
+  frontend-net:
+    name: cleancommerce-shared-net
+    driver: bridge

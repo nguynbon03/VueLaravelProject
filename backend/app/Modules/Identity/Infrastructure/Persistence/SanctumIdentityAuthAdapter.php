@@ -15,6 +15,7 @@ final readonly class SanctumIdentityAuthAdapter implements IdentityAuthPort
     public function __construct(
         private OrderAnalyticsReadPort $orderAnalytics,
     ) {}
+
     public function emailExists(string $email): bool
     {
         return User::query()->where('email', strtolower(trim($email)))->exists();
