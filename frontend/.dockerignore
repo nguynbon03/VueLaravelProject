@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+docs/
+README.md
+AGENTS.md
+CLAUDE.md
+docker-compose.yml
+Dockerfile
+*.log
+.DS_Store

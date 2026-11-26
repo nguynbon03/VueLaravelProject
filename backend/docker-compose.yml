@@ -1,116 +1,106 @@
 name: cleancommerce-backend
 
+x-backend-env: &backend-env
+  APP_NAME: "CleanCommerce API"
+  APP_ENV: "${APP_ENV:-local}"
+  APP_DEBUG: "${APP_DEBUG:-true}"
+  APP_URL: "http://localhost:${BACKEND_PORT:-8080}"
+  FRONTEND_URL: "${FRONTEND_URL:-http://localhost:5173}"
+  DB_CONNECTION: pgsql
+  DB_HOST: pgbouncer
+  DB_PORT: 6432
+  DB_DATABASE: "${DB_DATABASE:-ecommerce}"
+  DB_USERNAME: "${DB_USERNAME:-ecommerce}"
+  DB_PASSWORD: "${DB_PASSWORD:-ecommerce_secret}"
+  DB_EMULATE_PREPARES: "true"
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  MEILISEARCH_HOST: "http://meilisearch:7700"
+  MEILISEARCH_KEY: "${MEILI_MASTER_KEY:-masterKeyCleanCommerce2026}"
+  MAIL_MAILER: smtp
+  MAIL_HOST: mailpit
+  MAIL_PORT: 1025
+  SEPAY_WEBHOOK_SECRET: "${SEPAY_WEBHOOK_SECRET:-sepay_local_hmac_secret_2026}"
+  STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-stripe_local_hmac_secret_2026}"
+
 services:
-  # 1. Headless REST API (Laravel 13 + FrankenPHP 8.4)
+  # 1. Headless REST API (Laravel 13 + FrankenPHP 8.4 — builds the shared backend image once)
   api:
     build:
       context: .
       dockerfile: Dockerfile
+      target: dev
+    image: cleancommerce-backend:local
     container_name: ecom_backend_api
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-8080}:80"
     environment:
+      <<: *backend-env
       SERVER_NAME: ":80"
-      APP_NAME: "CleanCommerce API"
-      APP_ENV: "${APP_ENV:-local}"
-      APP_DEBUG: "${APP_DEBUG:-true}"
-      APP_URL: "http://localhost:${BACKEND_PORT:-8080}"
-      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:5173}"
-      DB_CONNECTION: pgsql
-      DB_HOST: pgbouncer
-      DB_PORT: 6432
-      DB_DATABASE: "${DB_DATABASE:-ecommerce}"
-      DB_USERNAME: "${DB_USERNAME:-ecommerce}"
-      DB_PASSWORD: "${DB_PASSWORD:-ecommerce_secret}"
-      DB_EMULATE_PREPARES: "true"
-      CACHE_STORE: redis
-      QUEUE_CONNECTION: redis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      MEILISEARCH_HOST: "http://meilisearch:7700"
-      MEILISEARCH_KEY: "${MEILI_MASTER_KEY:-masterKeyCleanCommerce2026}"
-      MAIL_MAILER: smtp
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
-      SEPAY_WEBHOOK_SECRET: "${SEPAY_WEBHOOK_SECRET:-sepay_local_hmac_secret_2026}"
-      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-stripe_local_hmac_secret_2026}"
     volumes:
       - .:/app
       - backend_vendor:/app/vendor
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy
       meilisearch:
         condition: service_healthy
     networks:
-      - backend-net
+      - shared-net
 
-  # 2. Async Domain Event & Notification Queue Worker
+  # 2. Async Domain Event & Notification Queue Worker (reuses cleancommerce-backend:local image)
   queue:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: cleancommerce-backend:local
+    pull_policy: never
     container_name: ecom_queue_worker
     restart: unless-stopped
     command: ["php", "artisan", "queue:work", "redis", "--queue=high,payments,search,default", "--sleep=1", "--tries=3", "--max-time=3600"]
     environment:
-      DB_CONNECTION: pgsql
-      DB_HOST: pgbouncer
-      DB_PORT: 6432
-      DB_DATABASE: "${DB_DATABASE:-ecommerce}"
-      DB_USERNAME: "${DB_USERNAME:-ecommerce}"
-      DB_PASSWORD: "${DB_PASSWORD:-ecommerce_secret}"
-      DB_EMULATE_PREPARES: "true"
-      QUEUE_CONNECTION: redis
-      REDIS_HOST: redis
-      MEILISEARCH_HOST: "http://meilisearch:7700"
-      MEILISEARCH_KEY: "${MEILI_MASTER_KEY:-masterKeyCleanCommerce2026}"
+      <<: *backend-env
     volumes:
       - .:/app
       - backend_vendor:/app/vendor
     depends_on:
-      postgres:
+      api:
+        condition: service_started
+      pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - backend-net
+      - shared-net
 
-  # 3. Transactional Outbox Relay + Expired Stock Reservation Sweeper
+  # 3. Transactional Outbox Relay + Expired Stock Reservation Sweeper (reuses cleancommerce-backend:local image)
   outbox-relay:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: cleancommerce-backend:local
+    pull_policy: never
     container_name: ecom_outbox_relay
     restart: unless-stopped
     command: ["php", "artisan", "outbox:relay", "--daemon", "--sleep-ms=500"]
     environment:
-      DB_CONNECTION: pgsql
-      DB_HOST: pgbouncer
-      DB_PORT: 6432
-      DB_DATABASE: "${DB_DATABASE:-ecommerce}"
-      DB_USERNAME: "${DB_USERNAME:-ecommerce}"
-      DB_PASSWORD: "${DB_PASSWORD:-ecommerce_secret}"
-      DB_EMULATE_PREPARES: "true"
-      QUEUE_CONNECTION: redis
-      REDIS_HOST: redis
+      <<: *backend-env
     volumes:
       - .:/app
       - backend_vendor:/app/vendor
     depends_on:
-      postgres:
+      api:
+        condition: service_started
+      pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - backend-net
+      - shared-net
 
   # 4. Primary ACID Relational Database
   postgres:
     image: postgres:16-alpine
+    pull_policy: missing
     container_name: ecom_postgres
     restart: unless-stopped
     ports:
@@ -127,11 +117,12 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - backend-net
+      - shared-net
 
-  # 5. PgBouncer Transaction Pooler
+  # 5. PgBouncer Transaction Pooler (Pinned version + TCP healthcheck on :6432)
   pgbouncer:
-    image: edoburu/pgbouncer:latest
+    image: edoburu/pgbouncer:v1.23.1-p2
+    pull_policy: missing
     container_name: ecom_pgbouncer
     restart: unless-stopped
     environment:
@@ -144,18 +135,28 @@ services:
       MAX_CLIENT_CONN: 500
       DEFAULT_POOL_SIZE: 40
       AUTH_TYPE: scram-sha-256
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 || nc -z 127.0.0.1 6432"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - backend-net
+      - shared-net
 
-  # 6. Redis 7
+  # 6. Redis 7.4 (@anonystick maxclients=10000 + ulimits nofile=65535 guard against timeout)
   redis:
     image: redis:7.4-alpine
+    pull_policy: missing
     container_name: ecom_redis
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction", "--maxclients", "10000", "--tcp-keepalive", "60"]
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     ports:
       - "${FORWARD_REDIS_PORT:-6379}:6379"
     volumes:
@@ -166,11 +167,12 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - backend-net
+      - shared-net
 
   # 7. Meilisearch
   meilisearch:
     image: getmeili/meilisearch:v1.12
+    pull_policy: missing
     container_name: ecom_meilisearch
     restart: unless-stopped
     ports:
@@ -187,17 +189,18 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - backend-net
+      - shared-net
 
   # 8. Mailpit
   mailpit:
     image: axllent/mailpit:v1.22
+    pull_policy: missing
     container_name: ecom_mailpit
     restart: unless-stopped
     ports:
       - "${FORWARD_MAILPIT_PORT:-8025}:8025"
     networks:
-      - backend-net
+      - shared-net
 
 volumes:
   pgdata:
@@ -206,6 +209,6 @@ volumes:
   backend_vendor:
 
 networks:
-  backend-net:
+  shared-net:
     name: cleancommerce-shared-net
     driver: bridge

@@ -30,18 +30,18 @@ function pickAdmin(): void {
     </p>
 
     <div class="demo-actions">
-      <button type="button" class="demo-choice" @click="pickCustomer">
+      <button type="button" class="demo-choice nowrap" @click="pickCustomer">
         <BaseIcon name="user" />
         <span class="choice-body">
-          <strong>Tài khoản Khách hàng</strong>
+          <strong>Khách hàng</strong>
           <span class="mono-code">khachhang@cleancommerce.vn</span>
         </span>
       </button>
 
-      <button type="button" class="demo-choice" @click="pickAdmin">
+      <button type="button" class="demo-choice nowrap" @click="pickAdmin">
         <BaseIcon name="shield" />
         <span class="choice-body">
-          <strong>Tài khoản Quản trị Admin</strong>
+          <strong>Quản trị viên</strong>
           <span class="mono-code">admin@cleancommerce.vn</span>
         </span>
       </button>

@@ -120,12 +120,12 @@ onMounted(() => {
             <button
               v-else
               type="button"
-              class="btn btn-secondary btn-sm"
+              class="btn btn-secondary btn-sm nowrap"
               :disabled="updatingId === u.id"
               @click="toggleRole(u)"
             >
               <BaseIcon name="shield" />
-              <span>{{ u.role === 'admin' ? 'Chuyển sang Khách' : 'Cấp quyền Admin' }}</span>
+              <span>{{ u.role === 'admin' ? 'Hạ quyền' : 'Cấp Admin' }}</span>
             </button>
           </td>
         </tr>

@@ -47,6 +47,13 @@ export const useAuthStore = defineStore('auth', () => {
     writeCachedUser(nextUser)
   }
 
+  if (typeof window !== 'undefined') {
+    window.addEventListener('cleancommerce:unauthorized', () => {
+      token.value = null
+      user.value = null
+    })
+  }
+
   async function login(credentials: { email: string; password: string }): Promise<UserProfile> {
     loading.value = true
     try {

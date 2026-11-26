@@ -7,6 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: dev
+    image: cleancommerce-frontend:local
     container_name: ecom_frontend_spa
     restart: unless-stopped
     ports:
@@ -20,12 +21,12 @@ services:
       - .:/workspace
       - frontend_node_modules:/workspace/node_modules
     networks:
-      - frontend-net
+      - shared-net
 
 volumes:
   frontend_node_modules:
 
 networks:
-  frontend-net:
+  shared-net:
     name: cleancommerce-shared-net
     driver: bridge

@@ -86,7 +86,7 @@ axiosClient.interceptors.response.use(
       if (!error.response) {
         return Promise.reject(
           new ApiError(
-            'Không thể kết nối tới máy chủ API (http://localhost:8080/api/v1). Vui lòng kiểm tra dịch vụ Backend đang chạy và thử tải lại.',
+            `Không thể kết nối tới máy chủ API (${API_BASE_URL}). Vui lòng kiểm tra dịch vụ Backend đang chạy và thử tải lại.`,
             0,
             null,
             true,
@@ -97,6 +97,9 @@ axiosClient.interceptors.response.use(
       const status = error.response.status
       if (status === 401) {
         setStoredToken(null)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('cleancommerce:unauthorized'))
+        }
       }
 
       const data = (

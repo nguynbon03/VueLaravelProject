@@ -1,23 +1,29 @@
-# Bản Đồ Nội Bộ 7 Bounded Contexts & Cơ Sở Dữ Liệu (`backend/docs/MODULE_MAP.md`)
+# Internal Map of 7 Bounded Contexts & Database Ownership (`backend/docs/MODULE_MAP.md`)  
+*(Bản Đồ Nội Bộ 7 Bounded Contexts & Cơ Sở Dữ Liệu (`backend/docs/MODULE_MAP.md`))*
 
-> **Phạm vi:** Tài liệu **RIÊNG** của `backend/` — mô tả cấu trúc kết nối nội bộ giữa 7 Bounded Contexts, `SharedKernel`, bảng PostgreSQL sở hữu riêng và tiến trình nền `outbox:relay`.
-> Để xem sơ đồ khớp nối xuyên sang Frontend Vue 3, mở [../../docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md).
+- **Scope**: Internal documentation for `backend/` — describes wiring across the 7 Bounded Contexts, `SharedKernel`, dedicated PostgreSQL tables, and the `outbox:relay` daemon.  
+  *(**Phạm vi**: Tài liệu RIÊNG của `backend/` — mô tả cấu trúc kết nối nội bộ giữa 7 Bounded Contexts, `SharedKernel`, bảng PostgreSQL sở hữu riêng và tiến trình nền `outbox:relay`.)*
+
+- **Cross-Service Architecture**: Open [../../docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) for the end-to-end Vue 3 <-> Laravel 13 integration flow.  
+  *(**Kiến trúc liên dịch vụ**: Mở [../../docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) để xem sơ đồ khớp nối xuyên sang Frontend Vue 3.)*
 
 ---
 
-## 1. Sơ Đồ Giao Tiếp Nội Bộ Qua `Domain Ports` (`app/Providers/ModulesServiceProvider.php`)
+## 1. Internal Communication via `Domain Ports` (`app/Providers/ModulesServiceProvider.php`)  
+*(Sơ Đồ Giao Tiếp Nội Bộ Qua `Domain Ports` (`app/Providers/ModulesServiceProvider.php`))*
 
-Các Module tuyệt đối không gọi trực tiếp Model hay Adapter của nhau mà chỉ giao tiếp qua `Domain\Contracts\*Port`:
+Modules never call each other's Eloquent Models or Adapters directly; all cross-module calls go through `Domain\Contracts\*Port`:  
+*(Các Module tuyệt đối không gọi trực tiếp Model hay Adapter của nhau mà chỉ giao tiếp qua `Domain\Contracts\*Port`:)*
 
 ```mermaid
 flowchart TD
-    Ordering["Ordering\n(Đặt hàng, Trạng thái, Anti-BOLA)"]
-    Catalog["Catalog\n(Danh mục, SPU/SKU)"]
-    Inventory["Inventory\n(Khóa FOR UPDATE & Giữ chỗ TTL 30p)"]
-    Promotion["Promotion\n(Báo giá giỏ & Mã giảm giá)"]
+    Ordering["Ordering\n(Checkout, State Machine, Anti-BOLA)"]
+    Catalog["Catalog\n(Categories, SPU/SKU)"]
+    Inventory["Inventory\n(FOR UPDATE Lock & 30m Reservation TTL)"]
+    Promotion["Promotion\n(Cart Quote & Discount Coupons)"]
     Payment["Payment\n(VietQR, Stripe, HMAC Inbox)"]
-    Identity["Identity\n(Sanctum Token & Quản lý RBAC)"]
-    Review["ReviewAnalytics\n(Verified Review & Thống kê GMV)"]
+    Identity["Identity\n(Sanctum Token & RBAC Management)"]
+    Review["ReviewAnalytics\n(Verified Review & GMV Analytics)"]
 
     Ordering -->|"CatalogVariantReadPort"| Catalog
     Ordering -->|"InventoryReservationPort"| Inventory
@@ -30,9 +36,10 @@ flowchart TD
 
 ---
 
-## 2. Bảng Phân Quyền Sở Hữu Bảng Dữ Liệu & `Port <-> Adapter`
+## 2. Database Table Ownership & `Port <-> Adapter` Bindings  
+*(Bảng Phân Quyền Sở Hữu Bảng Dữ Liệu & `Port <-> Adapter`)*
 
-| Module (`app/Modules/*`) | Bảng DB Sở Hữu Riêng | Interface Cung Cấp (`Domain/Contracts/`) | Adapter Thực Thi (`Infrastructure/Persistence/`) |
+| Module (`app/Modules/*`) | Dedicated DB Tables | Provided Interfaces (`Domain/Contracts/`) | Implementing Adapters (`Infrastructure/Persistence/`) |
 | :--- | :--- | :--- | :--- |
 | **`Identity`** | `users`, `personal_access_tokens` | `IdentityAuthPort` | `SanctumIdentityAdapter` |
 | **`Catalog`** | `catalog_categories`, `catalog_products`, `catalog_variants` | `CatalogRepositoryPort`, `CatalogVariantReadPort` | `EloquentCatalogAdapter` |
@@ -45,12 +52,16 @@ flowchart TD
 
 ---
 
-## 3. Chu Trình Tiến Trình Nền `php artisan outbox:relay`
+## 3. Background Daemon Cycle (`php artisan outbox:relay`)  
+*(Chu Trình Tiến Trình Nền `php artisan outbox:relay`)*
+
+- The `outbox-relay` daemon runs every 500ms to sweep expired stock reservations (`expires_at < now()`) and relay undispatched outbox events (`dispatched_at IS NULL`) to the Redis queue worker.  
+  *(Tiến trình nền `outbox-relay` chạy mỗi 500ms để thu hồi các phiếu giữ kho quá hạn (`expires_at < now()`) và đẩy các sự kiện outbox chưa gửi (`dispatched_at IS NULL`) sang hàng đợi Redis.)*
 
 ```mermaid
 flowchart LR
-    Tick["outbox-relay container\nChu kỳ 500ms"] --> Sweep["1. Quét inventory_reservations\nstatus='reserved' & expires_at < now()"]
-    Sweep -->|"Hoàn trả available_stock\nGhi sổ cái reservation_expired"| Stock[("inventory_stocks")]
-    Tick --> Poll["2. Đọc outbox_messages\ndispatched_at IS NULL"]
-    Poll -->|"Đẩy sự kiện sang Redis Queue\nĐánh dấu dispatched_at"| Queue["queue-worker\n(Meilisearch / Mailpit)"]
+    Tick["outbox-relay container\n500ms tick"] --> Sweep["1. Sweep inventory_reservations\nstatus='reserved' & expires_at < now()"]
+    Sweep -->|"Restore available_stock\nLog reservation_expired"| Stock[("inventory_stocks")]
+    Tick --> Poll["2. Read outbox_messages\ndispatched_at IS NULL"]
+    Poll -->|"Dispatch event to Redis Queue\nMark dispatched_at"| Queue["queue-worker\n(Meilisearch / Mailpit)"]
 ```
